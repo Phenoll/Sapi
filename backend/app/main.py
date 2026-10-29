@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from typing import List
+from typing import List, Optional
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
@@ -38,7 +38,16 @@ def health_check():
 
 # --- CLIENT ENDPOINTS ---
 @app.post("/clients", response_model=Client)
-def create_client(client: Client, session: Session = Depends(get_session)):
+def create_client(
+    client: Client,
+    owner_email: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    if owner_email and (not client.owner_email or client.owner_email == "default@sapi.com"):
+        client.owner_email = owner_email
+    if not client.owner_email:
+        client.owner_email = "default@sapi.com"
+
     session.add(client)
     session.commit()
     session.refresh(client)
@@ -46,10 +55,19 @@ def create_client(client: Client, session: Session = Depends(get_session)):
 
 
 @app.get("/clients")
-def list_clients_with_stats(session: Session = Depends(get_session)):
+def list_clients_with_stats(
+    owner_email: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
     """Returns all clients along with their computed Total Billed, Outstanding, and Invoice count for the Clients screen."""
-    clients = session.exec(select(Client)).all()
-    invoices = session.exec(select(Invoice)).all()
+    client_query = select(Client)
+    invoice_query = select(Invoice)
+    if owner_email:
+        client_query = client_query.where(Client.owner_email == owner_email)
+        invoice_query = invoice_query.where(Invoice.owner_email == owner_email)
+
+    clients = session.exec(client_query).all()
+    invoices = session.exec(invoice_query).all()
 
     enriched_clients = []
     for c in clients:
@@ -75,7 +93,19 @@ def list_clients_with_stats(session: Session = Depends(get_session)):
 
 # --- INVOICE ENDPOINTS ---
 @app.post("/invoices", response_model=Invoice)
-def create_invoice(invoice: Invoice, session: Session = Depends(get_session)):
+def create_invoice(
+    invoice: Invoice,
+    owner_email: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    if owner_email and (not invoice.owner_email or invoice.owner_email == "default@sapi.com"):
+        invoice.owner_email = owner_email
+    if not invoice.owner_email:
+        invoice.owner_email = "default@sapi.com"
+
+    if not invoice.due_date:
+        invoice.due_date = "24 May 2026"
+
     if not invoice.stellar_memo:
         invoice.stellar_memo = f"SAPI-{invoice.invoice_number}"
     session.add(invoice)
@@ -85,8 +115,14 @@ def create_invoice(invoice: Invoice, session: Session = Depends(get_session)):
 
 
 @app.get("/invoices", response_model=List[Invoice])
-def list_invoices(session: Session = Depends(get_session)):
-    return session.exec(select(Invoice).order_by(Invoice.id.desc())).all()
+def list_invoices(
+    owner_email: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    query = select(Invoice)
+    if owner_email:
+        query = query.where(Invoice.owner_email == owner_email)
+    return session.exec(query.order_by(Invoice.id.desc())).all()
 
 
 @app.get("/invoices/{invoice_id}", response_model=Invoice)
@@ -145,9 +181,18 @@ def verify_stellar_payment(
 
 # --- DASHBOARD SUMMARY ENDPOINT ---
 @app.get("/dashboard/summary")
-def get_dashboard_summary(session: Session = Depends(get_session)):
-    invoices = session.exec(select(Invoice)).all()
-    clients = session.exec(select(Client)).all()
+def get_dashboard_summary(
+    owner_email: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    invoice_query = select(Invoice)
+    client_query = select(Client)
+    if owner_email:
+        invoice_query = invoice_query.where(Invoice.owner_email == owner_email)
+        client_query = client_query.where(Client.owner_email == owner_email)
+
+    invoices = session.exec(invoice_query).all()
+    clients = session.exec(client_query).all()
 
     total_paid = sum(inv.amount for inv in invoices if inv.status.lower() == "paid")
     total_outstanding = sum(inv.amount for inv in invoices if inv.status.lower() in ["unpaid", "pending", "overdue"])

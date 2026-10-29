@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import { ChevronRight, Plus, Trash2 } from "lucide-react";
+import SendInvoiceModal from "@/components/SendInvoiceModal";
+import { ChevronRight, Plus, Trash2, Send } from "lucide-react";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -25,6 +26,30 @@ export default function NewInvoicePage() {
   const [dueDate, setDueDate] = useState("24th May 2026");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [ownerEmail, setOwnerEmail] = useState("default@sapi.com");
+  const [workspaceName, setWorkspaceName] = useState("My Workspace");
+
+  // Send Invoice Modal state
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [createdInvoice, setCreatedInvoice] = useState<{
+    id: number | string;
+    invoice_number: string;
+    client_name?: string;
+    client_email?: string | null;
+    amount?: number;
+    currency?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedProfile = localStorage.getItem("sapi_user_profile");
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed.email) setOwnerEmail(parsed.email);
+        if (parsed.workspaceName) setWorkspaceName(parsed.workspaceName);
+      }
+    } catch {}
+  }, []);
 
   const [items, setItems] = useState<LineItemRow[]>([
     {
@@ -73,8 +98,7 @@ export default function NewInvoicePage() {
     0
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveInvoice = async (openShareModal = true) => {
     setSubmitting(true);
 
     const invoiceNum = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -97,26 +121,53 @@ export default function NewInvoicePage() {
       line_items_json: JSON.stringify(formattedItems),
       notes: notes.trim() || null,
       stellar_memo: `SAPI-${invoiceNum}`,
+      owner_email: ownerEmail,
     };
 
     try {
-      const res = await fetch(`${API_BASE}/invoices`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${API_BASE}/invoices?owner_email=${encodeURIComponent(ownerEmail)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (res.ok) {
         const created = await res.json();
-        router.push(`/invoices/${created.id}`);
+        if (openShareModal) {
+          setCreatedInvoice(created);
+          setIsShareModalOpen(true);
+        } else {
+          router.push(`/invoices/${created.id}`);
+        }
+      } else {
+        // Fallback simulation
+        const mockCreated = { ...payload, id: Math.floor(100 + Math.random() * 900) };
+        if (openShareModal) {
+          setCreatedInvoice(mockCreated);
+          setIsShareModalOpen(true);
+        } else {
+          router.push("/invoices");
+        }
+      }
+    } catch {
+      const mockCreated = { ...payload, id: Math.floor(100 + Math.random() * 900) };
+      if (openShareModal) {
+        setCreatedInvoice(mockCreated);
+        setIsShareModalOpen(true);
       } else {
         router.push("/invoices");
       }
-    } catch {
-      router.push("/invoices");
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSaveInvoice(true);
   };
 
   return (
@@ -325,15 +376,37 @@ export default function NewInvoicePage() {
               Cancel
             </Link>
             <button
+              type="button"
+              disabled={submitting}
+              onClick={() => handleSaveInvoice(false)}
+              className="border border-[#EAE8E4] text-gray-800 bg-white hover:bg-[#FAF9F6] px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-2xs disabled:opacity-50"
+            >
+              Save as Draft
+            </button>
+            <button
               type="submit"
               disabled={submitting}
-              className="bg-[#C85228] hover:bg-[#B0451F] text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-2xs disabled:opacity-50"
+              className="bg-[#C85228] hover:bg-[#B0451F] text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors shadow-2xs disabled:opacity-50 flex items-center gap-2"
             >
-              {submitting ? "Creating..." : "Create Invoice"}
+              <Send className="w-4 h-4" />
+              <span>{submitting ? "Sending..." : "Send Invoice"}</span>
             </button>
           </div>
         </form>
       </div>
+
+      {/* Send & Share Invoice Modal */}
+      {createdInvoice && (
+        <SendInvoiceModal
+          isOpen={isShareModalOpen}
+          onClose={() => {
+            setIsShareModalOpen(false);
+            router.push(`/invoices/${createdInvoice.id}`);
+          }}
+          invoice={createdInvoice}
+          workspaceName={workspaceName}
+        />
+      )}
     </AppShell>
   );
 }

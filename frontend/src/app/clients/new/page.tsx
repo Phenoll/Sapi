@@ -34,8 +34,14 @@ export default function NewClientPage() {
     setSubmitting(true);
     setError(null);
 
+    let ownerEmail = "default@sapi.com";
     try {
-      const res = await fetch(`${API_BASE}/clients`, {
+      const profile = JSON.parse(localStorage.getItem("sapi_user_profile") || "{}");
+      if (profile.email) ownerEmail = profile.email;
+    } catch {}
+
+    try {
+      const res = await fetch(`${API_BASE}/clients?owner_email=${encodeURIComponent(ownerEmail)}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -48,6 +54,7 @@ export default function NewClientPage() {
           city: formData.city.trim() || null,
           country: formData.country.trim() || "Nigeria",
           status: "Active",
+          owner_email: ownerEmail,
         }),
       });
 

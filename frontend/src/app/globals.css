@@ -1,21 +1,142 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF9F6;
-  --foreground: #1A1A1A;
+  --sapi-bg: #FAF9F6;
+  --sapi-surface: #FFFFFF;
+  --sapi-recessed: #F5F5F4;
+  --sapi-subtle: #F3F2EE;
+  --sapi-border: #EAE8E4;
+  --sapi-border-strong: #E5E4DF;
+  --sapi-text-primary: #141312;
+  --sapi-text-secondary: #575450;
+  --sapi-text-muted: #686662;
+  --sapi-accent: #C85228;
+  --sapi-accent-soft: #FBECE5;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html.dark {
+  --sapi-bg: #0F0E0D;
+  --sapi-surface: #171614;
+  --sapi-recessed: #1E1C1A;
+  --sapi-subtle: #22201D;
+  --sapi-border: #2A2724;
+  --sapi-border-strong: #36322E;
+  --sapi-text-primary: #F5F3F0;
+  --sapi-text-secondary: #B5B0AA;
+  --sapi-text-muted: #8C8680;
+  --sapi-accent: #E06338;
+  --sapi-accent-soft: rgba(200, 82, 40, 0.16);
+  color-scheme: dark;
 }
 
 body {
-  background-color: #FAF9F6;
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--sapi-bg);
+  color: var(--sapi-text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   margin: 0;
   padding: 0;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* ==========================================================================
+   GLOBAL OBSIDIAN DARK MODE OVERRIDES (Covers Dashboard, Invoices, Clients)
+   ========================================================================== */
+
+/* 1. Primary Canvas & App Backgrounds */
+html.dark [class*="bg-[#FAF9F6]"] {
+  background-color: var(--sapi-bg) !important;
+}
+
+/* 2. Elevated Cards, Tables, Modals & Dropdowns */
+html.dark .bg-white {
+  background-color: var(--sapi-surface) !important;
+  color: var(--sapi-text-primary) !important;
+}
+
+/* 3. Recessed Wells, Search Bars & Secondary Containers */
+html.dark [class*="bg-[#F5F5F4]"],
+html.dark [class*="bg-[#F3F2EE]"],
+html.dark .bg-gray-50,
+html.dark .bg-gray-100 {
+  background-color: var(--sapi-recessed) !important;
+  color: var(--sapi-text-primary) !important;
+}
+
+/* 4. Active Terracotta States & Avatar Badges */
+html.dark [class*="bg-[#FBECE5]"] {
+  background-color: rgba(200, 82, 40, 0.16) !important;
+  color: #F27449 !important;
+}
+
+html.dark [class*="bg-[#FADCD0]"] {
+  background-color: rgba(200, 82, 40, 0.24) !important;
+  color: #FF8B64 !important;
+}
+
+/* 5. Interactive Hover Surfaces */
+html.dark .hover\:bg-gray-50:hover,
+html.dark .hover\:bg-gray-100:hover,
+html.dark [class*="hover:bg-[#FAF9F6]"]:hover,
+html.dark [class*="hover:bg-[#F3F2EE]"]:hover,
+html.dark [class*="hover:bg-[#EAE8E4]"]:hover {
+  background-color: #252320 !important;
+}
+
+/* 6. Hairline Borders & Dividers */
+html.dark [class*="border-[#EAE8E4]"],
+html.dark [class*="border-[#E5E4DF]"],
+html.dark .border-gray-100,
+html.dark .border-gray-200 {
+  border-color: var(--sapi-border) !important;
+}
+
+html.dark [class*="divide-[#EAE8E4]"]> :not([hidden])~ :not([hidden]) {
+  border-color: var(--sapi-border) !important;
+}
+
+/* 7. Typography Hierarchy */
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700 {
+  color: var(--sapi-text-primary) !important;
+}
+
+html.dark .text-gray-600,
+html.dark [class*="text-[#575450]"] {
+  color: var(--sapi-text-secondary) !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400,
+html.dark [class*="text-[#686662]"],
+html.dark [class*="text-[#8C8985]"] {
+  color: var(--sapi-text-muted) !important;
+}
+
+/* 8. Form Inputs, Selects & Textareas */
+html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark select,
+html.dark textarea {
+  background-color: #131210 !important;
+  color: var(--sapi-text-primary) !important;
+  border-color: var(--sapi-border-strong) !important;
+}
+
+html.dark input:disabled,
+html.dark select:disabled {
+  background-color: #1A1816 !important;
+  color: #6E6A64 !important;
+  border-color: #262320 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #6E6A64 !important;
+}
+
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus {
+  border-color: #E06338 !important;
 }
